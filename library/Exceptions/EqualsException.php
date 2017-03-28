@@ -11,14 +11,19 @@
 
 namespace Respect\Validation\Exceptions;
 
-class EqualsException extends ValidationException
+use Respect\Validation\Annotations\Template;
+use Respect\Validation\Annotations\Templates;
+
+/**
+ * @Templates(
+ *   regular={
+ *     @Template("{{placeholder}} must equals {{compareTo}}"),
+ *   },
+ *   inverted={
+ *     @Template("{{placeholder}} must not equals {{compareTo}}"),
+ *   },
+ * )
+ */
+final class EqualsException extends ValidationException
 {
-    public static $defaultTemplates = [
-        self::MODE_DEFAULT => [
-            self::STANDARD => '{{name}} must equal {{compareTo}}',
-        ],
-        self::MODE_NEGATIVE => [
-            self::STANDARD => '{{name}} must not equal {{compareTo}}',
-        ],
-    ];
 }

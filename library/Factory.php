@@ -11,10 +11,14 @@
 
 namespace Respect\Validation;
 
+use Doctrine\Common\Annotations\SimpleAnnotationReader;
 use ReflectionClass;
+use Respect\Validation\Annotations\Template;
+use Respect\Validation\Annotations\Templates;
 use Respect\Validation\Exceptions\ComponentException;
 use Respect\Validation\Exceptions\InvalidRuleException;
 use Respect\Validation\Exceptions\RuleNotFoundException;
+use Respect\Validation\Message\Formatter;
 
 /**
  * Factory to create rules.
@@ -123,6 +127,54 @@ final class Factory
         }
 
         throw new RuleNotFoundException(sprintf('Could not find "%s" rule', $ruleName));
+    }
+
+    private function getMessage(ReflectionClass $reflection, Result $result): string
+    {
+        $reader = new SimpleAnnotationReader();
+        $reader->addNamespace('Respect\\Validation\\Annotations');
+
+        $templates = $reader->getClassAnnotation($reflection, Templates::class);
+
+        $template = $this->chooseTemplate($templates, $result);
+
+        $formatter = new Formatter(2, 3);
+
+        return $formatter->create($result->getInput(), $result->getProperties(), $template->message);
+    }
+
+    public function exception(Result $result)
+    {
+        $exceptionName = str_replace('Rule', 'Exception', get_class($result->getRule())).'Exception';
+
+        $reflection = $this->getReflection($exceptionName);
+        $message = $this->getMessage($reflection, $result);
+
+        return $reflection->newInstance($message);
+    }
+
+    private function chooseTemplate(Templates $templates, Result $result): Template
+    {
+        $templatesList = $templates->regular;
+        if ($result->isInverted()) {
+            $templatesList = $templates->inverted;
+        }
+
+        $templateId = 'standard';
+        $properties = $result->getProperties();
+        if (isset($properties['templateId'])) {
+            $templateId = $properties['templateId'];
+        }
+
+        foreach ($templatesList as $template) {
+            if ($template->id != $templateId) {
+                continue;
+            }
+
+            return $template;
+        }
+
+        return current($templateLists);
     }
 
     /**
